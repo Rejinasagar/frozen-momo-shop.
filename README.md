@@ -1,1 +1,140 @@
 # frozen-momo-shop.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Frozen Momo Shop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+  <!-- Header -->
+  <header class="bg-white shadow p-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold">Frozen Momo Shop</h1>
+    <div>
+      <button id="cartBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Cart (<span id="cartCount">0</span>)</button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="bg-yellow-100 p-6 text-center">
+    <h2 class="text-3xl font-bold mb-2">Free Delivery on All Orders!</h2>
+    <p class="text-lg">Buy 5 plates, get 1 free!</p>
+    <p class="mt-2">📞 Message only for orders: <a href="sms:3464011235" class="text-blue-600 underline">346-401-1235</a></p>
+  </section>
+
+  <!-- Main Products Section -->
+  <main class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white p-4 rounded shadow">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/6/6f/Momo_nepal.jpg" alt="Chicken Momo" class="w-full h-48 object-cover rounded">
+      <h2 class="text-xl font-semibold mt-2">Chicken Momos (12 pcs)</h2>
+      <p class="text-gray-600 mt-1">$9.99</p>
+      <button onclick="addToCart('Chicken Momos', 9.99)" class="bg-green-500 text-white px-4 py-2 mt-2 rounded">Add to Cart</button>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/0/0f/Momo_from_Nepal.jpg" alt="Veg Momo" class="w-full h-48 object-cover rounded">
+      <h2 class="text-xl font-semibold mt-2">Veg Momos (12 pcs)</h2>
+      <p class="text-gray-600 mt-1">$7.99</p>
+      <button onclick="addToCart('Veg Momos', 7.99)" class="bg-green-500 text-white px-4 py-2 mt-2 rounded">Add to Cart</button>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/f/f4/Nepali_Momo_Chicken.jpg" alt="Buff Momo" class="w-full h-48 object-cover rounded">
+      <h2 class="text-xl font-semibold mt-2">Buff Momos (12 pcs)</h2>
+      <p class="text-gray-600 mt-1">$8.99</p>
+      <button onclick="addToCart('Buff Momos', 8.99)" class="bg-green-500 text-white px-4 py-2 mt-2 rounded">Add to Cart</button>
+    </div>
+  </main>
+
+  <!-- Cart Section (Modal) -->
+  <div id="cartModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+    <div class="bg-white p-6 rounded w-96">
+      <h2 class="text-xl font-bold mb-4">Your Cart</h2>
+      <ul id="cartItems" class="mb-4"></ul>
+      <p class="font-semibold">Total: $<span id="cartTotal">0.00</span></p>
+      <form onsubmit="submitOrder(event)">
+        <input type="text" id="customerName" placeholder="Your Name" class="border w-full p-2 mt-2 rounded" required>
+        <input type="tel" id="customerPhone" placeholder="Your Phone" class="border w-full p-2 mt-2 rounded" required>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 mt-4 rounded w-full">Submit Order</button>
+      </form>
+      <button onclick="toggleCart()" class="text-red-500 mt-2 block w-full">Close</button>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.submitOrder = async function (event) {
+      event.preventDefault();
+      const name = document.getElementById('customerName').value;
+      const phone = document.getElementById('customerPhone').value;
+      const date = new Date().toISOString();
+      const orderDetails = {
+        name,
+        phone,
+        date,
+        items: window.cart
+      };
+
+      try {
+        await addDoc(collection(db, "orders"), orderDetails);
+        alert("✅ Order submitted and saved to database!");
+      } catch (error) {
+        console.error("❌ Error saving order:", error);
+        alert("Error saving your order. Please try again.");
+      }
+
+      window.cart = [];
+      document.getElementById('cartCount').innerText = '0';
+      toggleCart();
+    };
+  </script>
+
+  <!-- JavaScript for Cart -->
+  <script>
+    window.cart = [];
+
+    function addToCart(name, price) {
+      window.cart.push({ name, price });
+      document.getElementById('cartCount').innerText = window.cart.length;
+    }
+
+    function toggleCart() {
+      document.getElementById('cartModal').classList.toggle('hidden');
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartItems = document.getElementById('cartItems');
+      cartItems.innerHTML = '';
+      let total = 0;
+
+      window.cart.forEach((item) => {
+        total += item.price;
+        cartItems.innerHTML += `<li class="mb-2">${item.name} - $${item.price.toFixed(2)}</li>`;
+      });
+
+      document.getElementById('cartTotal').innerText = total.toFixed(2);
+    }
+
+    document.getElementById('cartBtn').addEventListener('click', toggleCart);
+  </script>
+
+</body>
+</html>
